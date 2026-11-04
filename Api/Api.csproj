@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Fixed, shared across ALL RouteGo apps: one secrets.json per developer, one entry per app
+         (each app's key is its own secret name), so a developer configures secrets once. -->
+    <UserSecretsId>routego-platform</UserSecretsId>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+    <!-- LMI: trims first-request JIT (references/lambda-hosting.md) -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <TieredPgo>true</TieredPgo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- test files are co-located on disk but compiled into {Project}.Tests (references/test-compilation.md) -->
+    <Compile Remove="Features/**/*.Tests.cs" />
+    <Compile Remove="Infrastructure/**/*.Tests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- LMI hosting (references/lambda-hosting.md). Reference latest stable; keep the vulnerable scan clean. -->
+    <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" Version="*" />
+    <PackageReference Include="AWSSDK.DynamoDBStreams" Version="4.0.101.1" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.108" />
+    <!-- Standard AWS Secrets Manager access — baked into every project (references/secrets.md). -->
+    <PackageReference Include="AWSSDK.SecretsManager.Caching" Version="*" />
+    <PackageReference Include="AWSSDK.SecretsManager" Version="*" />
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="*" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="4.0.100.17" />
+    <PackageReference Include="AWSSDK.SQS" Version="4.0.100.19" />
+    <PackageReference Include="FluentValidation" Version="12.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
+    <!-- OpenAPI + Scalar API docs (references/host-components.md) — one-time setup. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="*" />
+    <!-- Microsoft.OpenApi as a RANGE, not a pinned minor. Two constraints have to hold at once:
+         at least what Microsoft.AspNetCore.OpenApi above needs (it floats, and its floor rises —
+         10.0.12 requires 2.12), and below 3.0, whose API surface ResponseHeadersTransformer is not
+         written against (2.x puts the models in the Microsoft.OpenApi namespace and makes
+         OpenApiSchema.Type the JsonSchemaType enum). A fixed minor can only express the ceiling, so
+         `2.7.*` became a DOWNGRADE the moment the floating parent's floor passed it — NU1605 is
+         warning-as-error here, so a freshly stamped project would not restore, build or scan. The
+         range lets NuGet satisfy the parent without a hand-edit, and still refuses 3.x.
+         The floor also stays clear of 2.0.0, which carries advisory NU1903 (high). -->
+    <PackageReference Include="Microsoft.OpenApi" Version="[2.12.2,3.0)" />
+    <PackageReference Include="Scalar.AspNetCore" Version="*" />
+    <!-- OpenTelemetry — baked in (references/observability.md). PINNED: OTel .NET has breaking
+         changes across versions, so these do NOT float with Version="*". -->
+    <PackageReference Include="OpenTelemetry" Version="1.15.*" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.15.*" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.*" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.*" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.*" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.*" />
+    <!-- Transport / data-access (or the UI "Backend" client) packages are added
+         by the sibling slice skill, NOT here. -->
+  </ItemGroup>
+
+</Project>

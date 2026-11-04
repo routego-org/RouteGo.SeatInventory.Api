@@ -1,0 +1,8 @@
+# Test-project override of the root RouteGo coding-standard .editorconfig.
+# The standard's own rule T1 mandates Method_Scenario_ExpectedResult test names, which the
+# root IDE1006 naming rules (PascalCase, no underscores) would reject — so naming enforcement
+# is relaxed HERE ONLY. Every other rule (braces, block bodies, var discipline, async hygiene,
+# banned APIs) still applies to test code.
+
+[*.cs]
+dotnet_diagnostic.IDE1006.severity = none

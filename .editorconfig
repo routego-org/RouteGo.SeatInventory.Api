@@ -1,0 +1,205 @@
+# RouteGo C# Coding Standards — machine-enforced subset
+# Copy this file to the ROOT of each application repository (editorconfig discovery
+# walks up from each source file; it will not apply from inside a submodule folder).
+# Enforced at build via EnforceCodeStyleInBuild — see enforcement/Directory.Build.props.
+# Rule IDs in comments refer to csharp-standards.md.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,md}]
+indent_size = 2
+
+[*.cs]
+
+#---------------------------------------------------------------------------
+# B1 — Always braces
+#---------------------------------------------------------------------------
+csharp_prefer_braces = true
+dotnet_diagnostic.IDE0011.severity = error
+
+#---------------------------------------------------------------------------
+# D1 / F1 — No expression-bodied members (block bodies everywhere)
+# Lambdas are exempt: a lambda is inherently an expression.
+#---------------------------------------------------------------------------
+csharp_style_expression_bodied_methods = false
+csharp_style_expression_bodied_constructors = false
+csharp_style_expression_bodied_operators = false
+csharp_style_expression_bodied_properties = false
+csharp_style_expression_bodied_indexers = false
+csharp_style_expression_bodied_accessors = false
+csharp_style_expression_bodied_local_functions = false
+dotnet_diagnostic.IDE0021.severity = error   # constructors
+dotnet_diagnostic.IDE0022.severity = error   # methods
+dotnet_diagnostic.IDE0023.severity = error   # conversion operators
+dotnet_diagnostic.IDE0024.severity = error   # operators
+dotnet_diagnostic.IDE0025.severity = error   # properties
+dotnet_diagnostic.IDE0026.severity = error   # indexers
+dotnet_diagnostic.IDE0027.severity = error   # accessors
+dotnet_diagnostic.IDE0061.severity = error   # local functions
+
+#---------------------------------------------------------------------------
+# F14 — var only when the type is written on the right
+#---------------------------------------------------------------------------
+csharp_style_var_for_built_in_types = false
+csharp_style_var_when_type_is_apparent = true
+csharp_style_var_elsewhere = false
+dotnet_diagnostic.IDE0007.severity = error   # use var when apparent
+dotnet_diagnostic.IDE0008.severity = error   # use explicit type otherwise
+
+#---------------------------------------------------------------------------
+# F17 — file-scoped namespaces
+#---------------------------------------------------------------------------
+csharp_style_namespace_declarations = file_scoped
+dotnet_diagnostic.IDE0161.severity = error
+
+#---------------------------------------------------------------------------
+# Stop the IDE/AI from being pushed TOWARD banned or budgeted constructs.
+# These preferences silence "modernizing" suggestions that fight the standard.
+#---------------------------------------------------------------------------
+# D3 — do not suggest ternaries over if/else
+dotnet_style_prefer_conditional_expression_over_assignment = false
+dotnet_style_prefer_conditional_expression_over_return = false
+dotnet_diagnostic.IDE0045.severity = none
+dotnet_diagnostic.IDE0046.severity = none
+# F7/F8 — do not suggest converting switch statements to switch expressions
+csharp_style_prefer_switch_expression = false
+dotnet_diagnostic.IDE0066.severity = none
+# D5 — do not suggest ?. / ?? rewrites (budgeted, one per statement)
+dotnet_style_null_propagation = false
+dotnet_style_coalesce_expression = false
+dotnet_diagnostic.IDE0031.severity = none
+dotnet_diagnostic.IDE0029.severity = none
+dotnet_diagnostic.IDE0030.severity = none
+dotnet_diagnostic.IDE0270.severity = none
+# F2 — do not suggest primary constructors (the ban itself is review-enforced)
+csharp_style_prefer_primary_constructors = false
+dotnet_diagnostic.IDE0290.severity = none
+# F4 — do not suggest collection expressions (the ban itself is review-enforced)
+dotnet_style_prefer_collection_expression = never
+dotnet_diagnostic.IDE0028.severity = none
+dotnet_diagnostic.IDE0300.severity = none
+dotnet_diagnostic.IDE0301.severity = none
+dotnet_diagnostic.IDE0302.severity = none
+dotnet_diagnostic.IDE0303.severity = none
+dotnet_diagnostic.IDE0304.severity = none
+dotnet_diagnostic.IDE0305.severity = none
+# F3 — do not suggest pattern-matching rewrites of null checks
+csharp_style_prefer_pattern_matching = false
+dotnet_diagnostic.IDE0078.severity = none
+# F15 — do not push target-typed new() beyond the allowed case
+csharp_style_implicit_object_creation_when_type_is_apparent = true
+dotnet_diagnostic.IDE0090.severity = silent
+
+#---------------------------------------------------------------------------
+# D6 — async hygiene (CA rules; VSTHRD rules come from the analyzer package)
+#---------------------------------------------------------------------------
+dotnet_diagnostic.CA2016.severity = error    # forward CancellationToken
+dotnet_diagnostic.VSTHRD002.severity = error # no .Result / .Wait / GetAwaiter().GetResult()
+dotnet_diagnostic.VSTHRD100.severity = error # no async void
+dotnet_diagnostic.VSTHRD103.severity = error # no sync API when async exists in async method
+dotnet_diagnostic.CS4014.severity = error    # un-awaited call: no write outlives its handler
+
+#---------------------------------------------------------------------------
+# Banned APIs (RS0030 via Microsoft.CodeAnalysis.BannedApiAnalyzers +
+# enforcement/BannedSymbols.txt): new HttpClient incl. handler overloads (H1),
+# unnamed CreateClient() (H2), EnsureSuccessStatusCode (H5), DateTime.Now/UtcNow (K5),
+# Activator (F22), Task.Wait/Result (D6)
+#---------------------------------------------------------------------------
+dotnet_diagnostic.RS0030.severity = error
+
+#---------------------------------------------------------------------------
+# N1 — naming (compiler-checked)
+#---------------------------------------------------------------------------
+dotnet_diagnostic.IDE1006.severity = error
+
+# Interfaces start with I
+dotnet_naming_rule.interfaces_begin_with_i.symbols = interface_symbols
+dotnet_naming_rule.interfaces_begin_with_i.style = prefix_i_style
+dotnet_naming_rule.interfaces_begin_with_i.severity = error
+dotnet_naming_symbols.interface_symbols.applicable_kinds = interface
+dotnet_naming_style.prefix_i_style.capitalization = pascal_case
+dotnet_naming_style.prefix_i_style.required_prefix = I
+
+# Types and public members: PascalCase
+dotnet_naming_rule.types_pascal.symbols = type_symbols
+dotnet_naming_rule.types_pascal.style = pascal_style
+dotnet_naming_rule.types_pascal.severity = error
+dotnet_naming_symbols.type_symbols.applicable_kinds = class, struct, enum, delegate, method, property, event
+dotnet_naming_style.pascal_style.capitalization = pascal_case
+
+# Private fields: _camelCase
+dotnet_naming_rule.private_fields_underscore.symbols = private_field_symbols
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel_style
+dotnet_naming_rule.private_fields_underscore.severity = error
+dotnet_naming_symbols.private_field_symbols.applicable_kinds = field
+dotnet_naming_symbols.private_field_symbols.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel_style.capitalization = camel_case
+dotnet_naming_style.underscore_camel_style.required_prefix = _
+
+# Constants: PascalCase
+dotnet_naming_rule.constants_pascal.symbols = constant_symbols
+dotnet_naming_rule.constants_pascal.style = pascal_style
+dotnet_naming_rule.constants_pascal.severity = error
+dotnet_naming_symbols.constant_symbols.applicable_kinds = field
+dotnet_naming_symbols.constant_symbols.required_modifiers = const
+
+# Parameters and locals: camelCase
+dotnet_naming_rule.locals_camel.symbols = local_symbols
+dotnet_naming_rule.locals_camel.style = camel_style
+dotnet_naming_rule.locals_camel.severity = error
+dotnet_naming_symbols.local_symbols.applicable_kinds = parameter, local
+dotnet_naming_style.camel_style.capitalization = camel_case
+
+#---------------------------------------------------------------------------
+# Formatting (Allman braces, standard .NET layout)
+# error, not warning — a misformatted file is a red build; `dotnet format`
+# fixes every IDE0055 violation mechanically.
+#---------------------------------------------------------------------------
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+dotnet_sort_system_directives_first = true
+dotnet_diagnostic.IDE0055.severity = error
+
+#---------------------------------------------------------------------------
+# R6 / E4 — dead code is deleted code: unused usings, members, values.
+# IDE0005 only runs at build with GenerateDocumentationFile=true — set for
+# every project in enforcement/Directory.Build.props.
+#---------------------------------------------------------------------------
+dotnet_diagnostic.IDE0005.severity = error   # unnecessary using directives
+dotnet_diagnostic.IDE0051.severity = error   # private member never used
+dotnet_diagnostic.IDE0052.severity = error   # private member written, never read
+dotnet_diagnostic.IDE0059.severity = error   # value assigned, never read
+dotnet_diagnostic.IDE0060.severity = warning # unused parameter — warning only: interface
+                                             # and framework signatures keep params legitimately
+
+#---------------------------------------------------------------------------
+# Explicit declarations (the exemplar style: explicit ctors, readonly fields)
+#---------------------------------------------------------------------------
+# non_interface: interface members stay modifier-free, per the exemplar style
+dotnet_style_require_accessibility_modifiers = for_non_interface_members
+dotnet_diagnostic.IDE0040.severity = error   # accessibility modifiers everywhere
+dotnet_diagnostic.IDE0036.severity = error   # canonical modifier order
+dotnet_style_readonly_field = true
+dotnet_diagnostic.IDE0044.severity = error   # never-reassigned private field -> readonly
+csharp_using_directive_placement = outside_namespace
+dotnet_diagnostic.IDE0065.severity = error   # usings above the namespace
+
+#---------------------------------------------------------------------------
+# GlobalUsings.cs is the curated shared-using seam, stamped ahead of the first
+# slice (the slice skills EXTEND it) — the one place a not-yet-used using is
+# sanctioned. Everywhere else IDE0005 stays an error.
+#---------------------------------------------------------------------------
+[**/*GlobalUsings.cs]
+dotnet_diagnostic.IDE0005.severity = none

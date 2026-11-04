@@ -1,0 +1,44 @@
+<!--
+  RouteGo C# Coding Standards - build enforcement.
+  Copy this file to the ROOT of each application repository (or merge these
+  properties/items into an existing Directory.Build.props). Together with the
+  .editorconfig at the repo root, style violations fail `dotnet build`.
+-->
+<Project>
+
+  <PropertyGroup>
+    <!-- Run IDExxxx style rules as part of the compiler, not just the editor -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <!-- A violation is a red build, not a squiggle someone ignores -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Severities are controlled per-rule in .editorconfig; rules marked
+         'error' there fail the build on their own. -->
+    <!-- Required for IDE0005 (unused usings) to run at build time. CS1591
+         (missing XML comment) is silenced: the C3 summary rule is review-enforced. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- VSTHRD002/100/103: sync-over-async, async void (standard rule D6) -->
+    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.10.48">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <!-- RS0030: banned APIs (new HttpClient, EnsureSuccessStatusCode, DateTime.Now, ...) -->
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Resolves once the docs/coding-standards submodule is added (new_project.py stamps this
+         file before the submodule exists — the Exists guard keeps the first build green; RS0030
+         banned-API enforcement activates the moment the submodule lands). -->
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)docs\coding-standards\enforcement\BannedSymbols.txt"
+                     Condition="Exists('$(MSBuildThisFileDirectory)docs\coding-standards\enforcement\BannedSymbols.txt')" />
+  </ItemGroup>
+
+</Project>

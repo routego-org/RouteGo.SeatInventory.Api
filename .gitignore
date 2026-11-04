@@ -1,0 +1,14 @@
+## .NET
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+*.user
+.vs/
+
+## Secrets — never commit. Local dev uses `dotnet user-secrets` (stored in the user profile).
+## The personal AWS profile/region also go in user-secrets (AWS:Profile / AWS:Region) or the
+## machine AWS_PROFILE / AWS_REGION env vars — NEVER in a committed appsettings/launchSettings.
+appsettings.*.local.json
+secrets.json
+*.pfx

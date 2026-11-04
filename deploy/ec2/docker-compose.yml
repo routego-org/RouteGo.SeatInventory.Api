@@ -1,0 +1,45 @@
+# EC2 deployment of the Seat Inventory API (routego-core). Started by start.sh. No .env file and no
+# database password: seats live in the DynamoDB table routego-seat-inventory, and the only secret
+# (routego/internal-key) is read from Secrets Manager by the app itself through the EC2 instance role.
+#
+# Joins the network the other RouteGo containers share, so the portal reaches this service as
+# http://seat-inventory:8080/ and this service reaches Identity's keys as http://identity:8080/.
+name: routego-seat-inventory
+services:
+  seat-inventory:
+    image: routego/seat-inventory:latest
+    restart: unless-stopped
+    ports:
+      - "5004:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      AWS_REGION: ap-south-1
+      SeatStoreTableName: routego-seat-inventory
+      # The issuer must be exactly what Identity writes into its tokens (SSM /routego/prod/identity/issuer).
+      IdentityIssuer: https://d1ihe9d37s080r.cloudfront.net
+      IdentityAudience: routego
+      IdentityJwksUrl: http://identity:8080/.well-known/jwks.json
+      InventoryEventsTopicArn: arn:aws:sns:ap-south-1:675252699468:routego-inventory-events
+      AuditEventsTopicArn: arn:aws:sns:ap-south-1:675252699468:routego-audit-events
+      # The hold timer: the app sends itself a delayed message per hold.
+      HoldExpiryQueueUrl: https://sqs.ap-south-1.amazonaws.com/675252699468/inventory-hold-expiry-q
+      # Fleet's trip events (routego-fleet-events, one queue per event type).
+      TripScheduledQueueUrl: https://sqs.ap-south-1.amazonaws.com/675252699468/inventory-trip-scheduled-q
+      TripScheduledDeadLetterQueueUrl: https://sqs.ap-south-1.amazonaws.com/675252699468/inventory-trip-scheduled-dlq
+      TripCancelledQueueUrl: https://sqs.ap-south-1.amazonaws.com/675252699468/inventory-trip-cancelled-q
+      TripCancelledDeadLetterQueueUrl: https://sqs.ap-south-1.amazonaws.com/675252699468/inventory-trip-cancelled-dlq
+      FareChangedQueueUrl: https://sqs.ap-south-1.amazonaws.com/675252699468/inventory-fare-changed-q
+      FareChangedDeadLetterQueueUrl: https://sqs.ap-south-1.amazonaws.com/675252699468/inventory-fare-changed-dlq
+      # Booking's events (routego-booking-events). Booking is not deployed yet; the queue simply stays empty.
+      BookingEventsQueueUrl: https://sqs.ap-south-1.amazonaws.com/675252699468/inventory-booking-q
+      BookingEventsDeadLetterQueueUrl: https://sqs.ap-south-1.amazonaws.com/675252699468/inventory-booking-dlq
+      # Workstation GC: a server-GC heap per core is too much on this 1 GB instance.
+      DOTNET_gcServer: "0"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  default:
+    name: ec2_default
+    external: true

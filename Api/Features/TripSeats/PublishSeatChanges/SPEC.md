@@ -36,10 +36,10 @@ Each criterion maps to tests in `PublishSeatChanges.Tests.cs`.
 - [x] AC-4: Staff actions give an audit record — `HandleAsync_OperatorBlocksSeats_PublishesSeatBlockedAndAnAuditRecord`,
   `HandleAsync_AdminCancelsHold_PublishesSeatReleasedAndAnAuditRecordWithTheNote`
 - [x] AC-5: No change without its event, even across a crash — the position is saved only after
-  delivery: `HandleAsync_MessagingDownThenBack_KeepsChangesThenDeliversThemInOrder`,
+  delivery: `HandleAsync_MessagingDownThenBack_KeepsChangesThenDeliversThemAll`,
   `HandleAsync_DeliveryNotConfirmed_RepublishesWithTheSameEventId`
 - [x] AC-6: A redelivered event keeps its event ID — `HandleAsync_DeliveryNotConfirmed_RepublishesWithTheSameEventId`
-- [x] AC-7: Delivery resumes after an outage — `HandleAsync_MessagingDownThenBack_KeepsChangesThenDeliversThemInOrder`
+- [x] AC-7: Delivery resumes after an outage — `HandleAsync_MessagingDownThenBack_KeepsChangesThenDeliversThemAll`
 - [x] AC-8: Alert when more than 5 minutes behind, once — `HandleAsync_ChangeWaitingOverFiveMinutes_RaisesTheDelayAlertOnce`
 - One publisher at a time — `HandleAsync_AnotherCopyHoldsTheLease_SkipsAndPublishesNothing`
 - Unreadable change parked, later changes still published — `HandleAsync_UnreadableChange_ReportsItAndStillPublishesLaterChanges`

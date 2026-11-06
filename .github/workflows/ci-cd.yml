@@ -52,6 +52,10 @@ jobs:
 
       - name: Test (Testcontainers starts throwaway Postgres / LocalStack / DynamoDB in the runner's Docker)
         run: dotnet test "$SOLUTION" -c Release --no-build --logger "trx;LogFileName=results.trx" --results-directory TestResults
+        env:
+          # Every test host watches its config files with inotify; Linux runners allow only 128 inotify
+          # instances, which a big test suite exhausts ("configured user limit (128)..."). Poll instead.
+          DOTNET_USE_POLLING_FILE_WATCHER: "true"
 
       - name: Upload test results
         if: always()

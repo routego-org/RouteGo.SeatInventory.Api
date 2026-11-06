@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: seat-inventory
+  labels: { app.kubernetes.io/name: seat-inventory, app.kubernetes.io/part-of: routego }
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+spec:
+  type: ClusterIP
+  selector: { app.kubernetes.io/name: seat-inventory }
+  ports:
+    - { name: http, port: 80, targetPort: http }   # other services call http://seat-inventory/

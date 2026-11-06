@@ -1,0 +1,17 @@
+# seat-inventory: Kubernetes manifests owned by this repo.
+#   kubectl apply -k k8s/          (the namespace, ConfigMap routego-environment and Ingress come from
+#                                   RouteGo.Infra/k8s/platform and must be applied first)
+# CI/CD sets the image tag:  cd k8s && kustomize edit set image routego/seat-inventory=675252699468.dkr.ecr.ap-southeast-1.amazonaws.com/routego/seat-inventory:<git-sha>
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: routego
+
+resources:
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+
+images:
+  - name: routego/seat-inventory
+    newName: 675252699468.dkr.ecr.ap-southeast-1.amazonaws.com/routego/seat-inventory
+    newTag: latest

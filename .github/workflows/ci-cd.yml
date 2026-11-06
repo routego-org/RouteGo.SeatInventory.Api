@@ -1,0 +1,159 @@
+# CI/CD for Seat Inventory (RouteGo.SeatInventory.Api) — RouteGo DevOps course.
+#
+#   Pull request to main  ->  build + test                     (no AWS access at all)
+#   Push / merge to main  ->  build + test -> image to ECR -> deploy to EKS
+#
+# AWS access is keyless: GitHub OIDC -> IAM role routego-github-actions-eks (RouteGo.Infra/foundation/github-actions.tf).
+# One-time setup per GitHub org/repo: see RouteGo.Infra/CICD.md (variable AWS_ROLE_ARN, environment "production").
+name: ci-cd
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never run two deploys of the same service at once; a newer PR run cancels an older one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  AWS_REGION: ap-southeast-1
+  SOLUTION: Api.sln
+  DOTNET_VERSION: "10.0.x"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+  EKS_CLUSTER: routego-eks
+  NAMESPACE: routego
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore "$SOLUTION"
+
+      - name: Build (analyzers + warnings-as-errors run here)
+        run: dotnet build "$SOLUTION" -c Release --no-restore
+
+      - name: Test (Testcontainers starts throwaway Postgres / LocalStack / DynamoDB in the runner's Docker)
+        run: dotnet test "$SOLUTION" -c Release --no-build --logger "trx;LogFileName=results.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
+          retention-days: 7
+
+  image:
+    name: Image ${{ matrix.name }} -> ECR
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write          # lets the job request the OIDC token AWS trusts
+    strategy:
+      matrix:
+        include:
+          - name: seat-inventory
+            dockerfile: Dockerfile
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: AWS credentials (OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push (tag = commit SHA, plus "latest")
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          provenance: false     # one plain image per tag in ECR, no attestation manifest
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/routego/${{ matrix.name }}:${{ github.sha }}
+            ${{ steps.ecr.outputs.registry }}/routego/${{ matrix.name }}:latest
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  deploy:
+    name: Deploy to EKS
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Add "Required reviewers" to this environment (repo Settings -> Environments) for a manual approval gate.
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: AWS credentials (OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Connect kubectl to the cluster
+        run: |
+          aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
+          kubectl get namespace "$NAMESPACE"   # fails early with a clear error if the cluster is down
+
+      - name: Deploy the new image
+        run: |
+          for component in seat-inventory:k8s; do
+            name="${component%%:*}"; dir="${component#*:}"
+            # Pin the exact image built above. (CI-only edit; the repo keeps newTag: latest.)
+            sed -i "s/newTag: .*/newTag: ${GITHUB_SHA}/" "$dir/kustomization.yaml"
+            kubectl apply -k "$dir"
+          done
+
+      - name: Wait for the rollout (automatic rollback if it does not become healthy)
+        run: |
+          for name in seat-inventory; do
+            if ! kubectl -n "$NAMESPACE" rollout status "deploy/$name" --timeout=300s; then
+              echo "::error::$name did not become ready - rolling back"
+              kubectl -n "$NAMESPACE" get pods -l "app.kubernetes.io/name=$name" -o wide
+              kubectl -n "$NAMESPACE" logs "deploy/$name" --tail=80 || true
+              kubectl -n "$NAMESPACE" rollout undo "deploy/$name"
+              exit 1
+            fi
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Deployed \`${GITHUB_SHA::7}\`"
+            echo '```'
+            kubectl -n "$NAMESPACE" get deploy seat-inventory -o wide || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

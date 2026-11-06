@@ -8,7 +8,8 @@ WORKDIR /src
 # Root build files first: the coding-standard analyzers and .editorconfig run during the build,
 # and BannedSymbols.txt comes from the docs/coding-standards submodule.
 COPY Directory.Build.props .editorconfig ./
-COPY docs/coding-standards/enforcement/ docs/coding-standards/enforcement/
+# (Removed: COPY docs/coding-standards/enforcement/ — that submodule is not in this repo, so the line broke
+#  every build. Directory.Build.props only references it when it exists.)
 
 # Restore on the csproj alone so the package layer is cached until dependencies change.
 COPY Api/Api.csproj Api/
